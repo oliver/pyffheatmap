@@ -1,0 +1,11 @@
+$def with (message)
+
+<h1>Upload</h1>
+
+$if message:
+    <p>Msg: '$message'</p>
+
+<form method="POST" enctype="multipart/form-data">
+<input type="file" name="f">
+<input type="submit" value="Upload File">
+</form>

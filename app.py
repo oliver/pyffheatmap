@@ -1,0 +1,145 @@
+#!/usr/bin/python
+
+#
+# Python Freifunk Heat Map
+#
+
+
+import datetime
+import web
+
+#web.config.debug = False
+
+
+# file format constants
+FILE_FORMAT_WIFI_LL_CSV = 1
+
+
+render = web.template.render("templates/")
+db = web.database(dbn="sqlite", db="test1.db")
+
+urls = (
+    "/", "Index",
+    "/upload", "Upload",
+    "/map", "Map",
+    "/mapdata/(.+)/(.+)/(.+)/(.+)", "MapData",
+    )
+
+app = web.application(urls, globals())
+
+class Index:
+    def GET(self):
+        return "Hello! Go to /upload or /map page!"
+
+
+class Map:
+    def GET(self):
+        return render.mapview()
+
+
+class MapData:
+    def GET(self, west, east, north, south):
+
+        hotspots = db.query("select * from scans join hotspots where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north and hotspots.scanid = scans.id limit 300",
+            vars={"west": float(west), "east": float(east), "north": float(north), "south": float(south)})
+
+        geojson = {
+            "type": "FeatureCollection",
+            "features": []
+        }
+
+        numRows = 0
+        for row in hotspots:
+            feat = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [ row["lon"], row["lat"] ]
+                },
+            }
+            geojson["features"].append(feat)
+            numRows+=1
+
+        print "numRows: %d" % numRows
+
+        import json
+        web.header("Content-Type", "application/json")
+        return json.dumps( geojson )
+
+
+class Upload:
+    def GET(self):
+        return render.upload("")
+
+    def POST(self):
+        #values = web.input(f={})
+        values = web.input()
+
+        if len(values.keys()) != 1:
+            # there must be exactly one form field in the request
+            raise web.webapi.BadRequest()
+
+        for key in values:
+            contents = values[key]
+
+        if not(contents):
+            message = "ignoring empty file."
+        else:
+            try:
+                self.handleFileContents(contents)
+            except Exception, e:
+                message = "error handling uploaded file (%s)" % e
+            else:
+                message = "file was uploaded (%d bytes)!" % len(contents)
+
+        print "message: '%s'" % message
+        #raise web.seeother("/finished")
+
+        return render.upload(message)
+
+    def handleFileContents(self, s):
+        # for debugging:
+        fd = open("/tmp/uploaded.bin", "wb")
+        fd.write(s)
+        fd.close()
+
+        # assume that uploaded files are in CSV format
+        # TODO: detect file type
+
+        def check(condition):
+            "helper function for easily performing validation checks on the file contents"
+            if not(condition):
+               raise Exception("file is invalid")
+
+        import csv
+        import StringIO
+        reader = csv.reader(StringIO.StringIO(s))
+
+        t = db.transaction()
+
+        fileId = None
+        for row in reader:
+            #print row
+            check(len(row) == 16)
+            check(row[1] == "1") # format version
+
+            (timestamp, formatVersion, deviceModel, sessionId, lat, lon, alt, accuracy, speed, specialCode, timeSinceLastLocUpdate, ssid, bssid, signalLevel, channel, filterRE) = row
+
+            # TODO: combine rows with identical locations and (nearly) identical timestamps (rounded to maybe one second) into a single scan result
+
+            if not(fileId):
+                fileId = db.insert("files", sessionid=sessionId, upload_date=datetime.datetime.now(), format=FILE_FORMAT_WIFI_LL_CSV, formatversion=int(formatVersion), device=deviceModel)
+                print "fileId: %s" % fileId
+
+            dotPos = timestamp.rindex(".")
+            timestampDt = datetime.datetime.strptime(timestamp[:dotPos], "%Y-%m-%d %H:%M:%S")
+
+            scanId = db.insert("scans", fileid=fileId, scantime=timestampDt, lat=float(lat), lon=float(lon), alt=float(alt), accuracy=float(accuracy))
+            if int(specialCode) == 0: # row actually contains a hotspot
+                db.insert("hotspots", scanid=scanId, ssid=ssid, bssid=bssid, channel=int(channel), level=int(signalLevel))
+
+        t.commit()
+
+if __name__ == "__main__":
+    app.run()
+
