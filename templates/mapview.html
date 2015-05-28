@@ -36,7 +36,11 @@ function reloadData(e) {
                 map.removeLayer(features);
             }
 
-            features = new L.geoJson(response);
+            features = new L.geoJson(response, {
+                pointToLayer: function (feature, latlng) {
+                    return new L.Marker(latlng, {title: feature.properties.text});
+                }
+            });
             map.addLayer(features);
         }
     });

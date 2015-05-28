@@ -40,7 +40,7 @@ class Map:
 class MapData:
     def GET(self, west, east, north, south):
 
-        hotspots = db.query("select * from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north limit 300",
+        scans = db.query("select * from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north limit 300",
             vars={"west": float(west), "east": float(east), "north": float(north), "south": float(south)})
 
         geojson = {
@@ -49,13 +49,25 @@ class MapData:
         }
 
         numRows = 0
-        for row in hotspots:
+        for row in scans:
+            hotspots = db.query("select * from hotspots where scanid = $scanid",
+                vars={"scanid": row["id"]})
+
+            ssids = [ h["ssid"] for h in hotspots ]
+            if ssids:
+                desc = ("%d: " % len(ssids)) + (", ".join(ssids))
+            else:
+                desc = "(no hotspots)"
+
             feat = {
                 "type": "Feature",
                 "geometry": {
                     "type": "Point",
                     "coordinates": [ row["lon"], row["lat"] ]
                 },
+                "properties": {
+                    "text": desc,
+                }
             }
             geojson["features"].append(feat)
             numRows+=1
