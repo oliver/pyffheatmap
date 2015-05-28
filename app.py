@@ -117,6 +117,21 @@ class Upload:
 
         t = db.transaction()
 
+        # data of "current" scan (used for cumulating multiple hotspots at same location into single scan entry):
+        currentScan = {
+            "ts": None,
+            "lat": None,
+            "lon": None,
+            "alt": None,
+            "accuracy": None
+        }
+        currentHotspots = []
+
+        def addScan(fileId, scan, hotspots):
+            scanId = db.insert("scans", fileid=fileId, scantime=scan["ts"], lat=scan["lat"], lon=scan["lon"], alt=scan["alt"], accuracy=scan["accuracy"])
+            for h in hotspots:
+                db.insert("hotspots", scanid=scanId, ssid=h[0], bssid=h[1], channel=h[2], level=h[3])
+
         fileId = None
         for row in reader:
             #print row
@@ -125,8 +140,6 @@ class Upload:
 
             (timestamp, formatVersion, deviceModel, sessionId, lat, lon, alt, accuracy, speed, specialCode, timeSinceLastLocUpdate, ssid, bssid, signalLevel, channel, filterRE) = row
 
-            # TODO: combine rows with identical locations and (nearly) identical timestamps (rounded to maybe one second) into a single scan result
-
             if not(fileId):
                 fileId = db.insert("files", sessionid=sessionId, upload_date=datetime.datetime.now(), format=FILE_FORMAT_WIFI_LL_CSV, formatversion=int(formatVersion), device=deviceModel)
                 print "fileId: %s" % fileId
@@ -134,9 +147,29 @@ class Upload:
             dotPos = timestamp.rindex(".")
             timestampDt = datetime.datetime.strptime(timestamp[:dotPos], "%Y-%m-%d %H:%M:%S")
 
-            scanId = db.insert("scans", fileid=fileId, scantime=timestampDt, lat=float(lat), lon=float(lon), alt=float(alt), accuracy=float(accuracy))
-            if int(specialCode) == 0: # row actually contains a hotspot
-                db.insert("hotspots", scanid=scanId, ssid=ssid, bssid=bssid, channel=int(channel), level=int(signalLevel))
+            newScan = {
+                "ts": timestampDt,
+                "lat": float(lat),
+                "lon": float(lon),
+                "alt": float(alt),
+                "accuracy": float(accuracy),
+            }
+
+            if newScan != currentScan:
+                # create new scan entry
+                if currentScan["ts"] is not None:
+                    # save old scan entry first
+                    addScan(fileId, currentScan, currentHotspots)
+                currentScan = newScan
+                currentHotspots = []
+            else:
+                # add to previous scan entry
+                if int(specialCode) == 0: # row actually contains a hotspot
+                    currentHotspots.append( (ssid, bssid, int(channel), int(signalLevel)) )
+
+        # save last scan entry
+        if currentScan["ts"] is not None:
+            addScan(fileId, currentScan, currentHotspots)
 
         t.commit()
 
