@@ -22,20 +22,32 @@ This is the footer.
 <script type="text/javascript">
 
 var map;
+var features = null;
 
-\$(function() {
-    map = L.map('map').setView([51.55,9.94], 17);
-    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
-
+function reloadData(e) {
     bounds = map.getBounds();
 
     \$.ajax({
         url: "/mapdata/"+bounds.getWest()+"/"+bounds.getEast()+"/"+bounds.getNorth()+"/"+bounds.getSouth(),
         success: function(response)
         {
-            L.geoJson(response).addTo(map);
+            if (features != null)
+            {
+                map.removeLayer(features);
+            }
+
+            features = new L.geoJson(response);
+            map.addLayer(features);
         }
     });
+}
+
+\$(function() {
+    map = L.map('map').setView([51.55,9.94], 17);
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
+
+    reloadData();
+    map.on('moveend', reloadData);
 });
 
 </script>
