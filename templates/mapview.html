@@ -66,6 +66,7 @@ var heatmapCfg = {
 
 
 var map;
+var markerLayer;
 var features = null;
 var heatmapLayer;
 
@@ -86,7 +87,7 @@ function reloadData(e) {
                     return new L.Marker(latlng, {title: "(quality: " + feature.properties.quality + ") " + feature.properties.text});
                 }
             });
-            map.addLayer(features);
+            features.addTo(markerLayer);
 
             // set heatmap data
             var heatData = {
@@ -113,8 +114,17 @@ function reloadData(e) {
     map = L.map('map').setView([lat, lon], zoom);
     L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
 
+    markerLayer = new L.LayerGroup();
+    map.addLayer(markerLayer);
+
     heatmapLayer = new HeatmapOverlay(heatmapCfg);
     map.addLayer(heatmapLayer);
+
+    var overlays = {
+        "Markers": markerLayer,
+        "Heatmap": heatmapLayer,
+    };
+    L.control.layers({}, overlays).addTo(map);
 
     reloadData();
     map.on('moveend', reloadData);
