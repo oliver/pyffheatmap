@@ -42,6 +42,14 @@ function getCookie(cname) {
     return "";
 }
 
+function getCookieDefault(cname, defValue) {
+    var value = getCookie(cname);
+    if (value == "")
+        return defValue;
+    else
+        return value;
+}
+
 
 
 var heatmapCfg = {
@@ -107,18 +115,20 @@ function reloadData(e) {
 }
 
 \$(function() {
-    var lat = getCookie("lat") || 51.55;
-    var lon = getCookie("lon") || 9.94;
-    var zoom = getCookie("zoom") || 17;
+    var lat = getCookieDefault("lat", 51.55);
+    var lon = getCookieDefault("lon", 9.94);
+    var zoom = getCookieDefault("zoom", 17);
 
     map = L.map('map').setView([lat, lon], zoom);
     L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
 
     markerLayer = new L.LayerGroup();
-    map.addLayer(markerLayer);
+    if (getCookieDefault("layer_markers", "true") == "true")
+        map.addLayer(markerLayer);
 
     heatmapLayer = new HeatmapOverlay(heatmapCfg);
-    map.addLayer(heatmapLayer);
+    if (getCookieDefault("layer_heatmap", "true") == "true")
+        map.addLayer(heatmapLayer);
 
     var overlays = {
         "Markers": markerLayer,
@@ -135,6 +145,9 @@ function reloadData(e) {
     setCookie("lat", center.lat);
     setCookie("lon", center.lng);
     setCookie("zoom", map.getZoom());
+
+    setCookie("layer_markers", map.hasLayer(markerLayer) ? "true" : "false");
+    setCookie("layer_heatmap", map.hasLayer(heatmapLayer) ? "true" : "false");
 });
 
 </script>
