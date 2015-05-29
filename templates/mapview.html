@@ -7,6 +7,8 @@
 
 <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
 <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+<script src="http://github.com/pa7/heatmap.js/raw/v2.0/build/heatmap.min.js"></script>
+<script src="http://raw.githubusercontent.com/pa7/heatmap.js/develop/plugins/leaflet-heatmap.js"></script>
 
 <style type="text/css">
 body {
@@ -41,8 +43,31 @@ function getCookie(cname) {
 }
 
 
+
+var heatmapCfg = {
+  // radius should be small ONLY if scaleRadius is true (or small radius is intended)
+  // if scaleRadius is false it will be the constant radius used in pixels
+  "radius": 0.001,
+  "maxOpacity": .8,
+  // scales the radius based on map zoom
+  "scaleRadius": true,
+  // if set to false the heatmap uses the global maximum for colorization
+  // if activated: uses the data maximum within the current map boundaries
+  //   (there will always be a red spot with useLocalExtremas true)
+  "useLocalExtrema": false,
+  // which field name in your data represents the latitude - default "lat"
+  latField: 'lat',
+  // which field name in your data represents the longitude - default "lng"
+  lngField: 'lng',
+  // which field name in your data represents the data value - default "value"
+  valueField: 'value'
+};
+
+
+
 var map;
 var features = null;
+var heatmapLayer;
 
 function reloadData(e) {
     bounds = map.getBounds();
@@ -58,10 +83,24 @@ function reloadData(e) {
 
             features = new L.geoJson(response, {
                 pointToLayer: function (feature, latlng) {
-                    return new L.Marker(latlng, {title: feature.properties.text});
+                    return new L.Marker(latlng, {title: "(quality: " + feature.properties.quality + ") " + feature.properties.text});
                 }
             });
             map.addLayer(features);
+
+            // set heatmap data
+            var heatData = {
+                min: 0,
+                max: 40,
+                data: [],
+            };
+            for (var i in response.features)
+            {
+                var feature = response.features[i];
+                var newPoint = {lat: feature.geometry.coordinates[1], lng: feature.geometry.coordinates[0], value: feature.properties.quality}
+                heatData.data.push(newPoint);
+            }
+            heatmapLayer.setData(heatData);
         }
     });
 }
@@ -73,6 +112,9 @@ function reloadData(e) {
 
     map = L.map('map').setView([lat, lon], zoom);
     L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
+
+    heatmapLayer = new HeatmapOverlay(heatmapCfg);
+    map.addLayer(heatmapLayer);
 
     reloadData();
     map.on('moveend', reloadData);

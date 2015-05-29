@@ -53,11 +53,15 @@ class MapData:
             hotspots = db.query("select * from hotspots where scanid = $scanid",
                 vars={"scanid": row["id"]})
 
+            hotspots = list(hotspots)
+            maxLevel = max( [-1000] + [ h["level"] for h in hotspots] )
+
             ssids = [ h["ssid"] for h in hotspots ]
             if ssids:
                 desc = ("%d: " % len(ssids)) + (", ".join(ssids))
             else:
                 desc = "(no hotspots)"
+                continue
 
             feat = {
                 "type": "Feature",
@@ -66,6 +70,7 @@ class MapData:
                     "coordinates": [ row["lon"], row["lat"] ]
                 },
                 "properties": {
+                    "quality": maxLevel+100,
                     "text": desc,
                 }
             }
