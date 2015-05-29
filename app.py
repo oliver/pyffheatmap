@@ -29,7 +29,7 @@ app = web.application(urls, globals())
 
 class Index:
     def GET(self):
-        return "Hello! Go to /upload or /map page!"
+        return render.index()
 
 
 class Map:
