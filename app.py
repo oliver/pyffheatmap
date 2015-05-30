@@ -182,7 +182,7 @@ class Upload:
             else:
                 # add to previous scan entry
                 if int(specialCode) == 0: # row actually contains a hotspot
-                    currentHotspots.append( (ssid, bssid, int(channel), int(signalLevel)) )
+                    currentHotspots.append( (ssid.decode("utf-8", "replace"), bssid, int(channel), int(signalLevel)) )
 
         # save last scan entry
         if currentScan["ts"] is not None:
