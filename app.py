@@ -175,10 +175,9 @@ class Upload:
                     addScan(fileId, currentScan, currentHotspots)
                 currentScan = newScan
                 currentHotspots = []
-            else:
-                # add to previous scan entry
-                if int(specialCode) == 0 and ssid.find("freifunk") != -1: # row actually contains a hotspot, and it's a FF node
-                    currentHotspots.append( (ssid.decode("utf-8", "replace"), bssid, int(channel), int(signalLevel)) )
+
+            if int(specialCode) == 0 and ssid.find("freifunk") != -1: # row actually contains a hotspot, and it's a FF node
+                currentHotspots.append( (ssid.decode("utf-8", "replace"), bssid, int(channel), int(signalLevel)) )
 
         # save last scan entry
         if currentScan["ts"] is not None:
