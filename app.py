@@ -123,11 +123,6 @@ class Upload:
         # assume that uploaded files are in CSV format
         # TODO: detect file type
 
-        def check(condition):
-            "helper function for easily performing validation checks on the file contents"
-            if not(condition):
-               raise Exception("file is invalid")
-
         import csv
         import StringIO
         reader = csv.reader(StringIO.StringIO(s))
@@ -152,8 +147,9 @@ class Upload:
         fileId = None
         for row in reader:
             #print row
-            check(len(row) == 16)
-            check(row[1] == "1") # format version
+            if len(row) != 16 or row[1] != "1":
+                print "invalid data in line %d (num columns: %d; format version: '%s')" % (reader.line_num, len(row), row[1])
+                continue
 
             (timestamp, formatVersion, deviceModel, sessionId, lat, lon, alt, accuracy, speed, specialCode, timeSinceLastLocUpdate, ssid, bssid, signalLevel, channel, filterRE) = row
 
