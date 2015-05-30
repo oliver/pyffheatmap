@@ -40,7 +40,7 @@ class Map:
 class MapData:
     def GET(self, west, east, north, south):
 
-        scans = db.query("select * from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north limit 300",
+        scans = db.query("select * from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north",
             vars={"west": float(west), "east": float(east), "north": float(north), "south": float(south)})
 
         geojson = {
