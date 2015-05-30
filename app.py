@@ -6,6 +6,9 @@
 
 
 import datetime
+import StringIO
+import json
+import csv
 import web
 
 #web.config.debug = False
@@ -15,14 +18,14 @@ import web
 FILE_FORMAT_WIFI_LL_CSV = 1
 
 
-render = web.template.render("templates/")
 db = web.database(dbn="sqlite", db="test1.db")
+render = web.template.render("templates/")
 
 urls = (
     "/", "Index",
-    "/upload", "Upload",
     "/map", "Map",
     "/mapdata/(.+)/(.+)/(.+)/(.+)", "MapData",
+    "/upload", "Upload",
     )
 
 app = web.application(urls, globals())
@@ -79,7 +82,6 @@ class MapData:
 
         print "numRows: %d" % numRows
 
-        import json
         web.header("Content-Type", "application/json")
         return json.dumps( geojson )
 
@@ -102,32 +104,27 @@ class Upload:
         if not(contents):
             message = "ignoring empty file."
         else:
+            # save raw file contents for debugging:
+            fd = open("/tmp/uploaded.bin", "wb")
+            fd.write(contents)
+            fd.close()
+
             try:
-                self.handleFileContents(contents)
+                # assume that uploaded files are in CSV format
+                # TODO: detect file type
+                self.parseWifiLLCSVFile(contents)
             except Exception, e:
                 message = "error handling uploaded file (%s)" % e
             else:
                 message = "file was uploaded (%d bytes)!" % len(contents)
 
-        print "message: '%s'" % message
         #raise web.seeother("/finished")
-
         return render.upload(message)
 
-    def handleFileContents(self, s):
-        # for debugging:
-        fd = open("/tmp/uploaded.bin", "wb")
-        fd.write(s)
-        fd.close()
+    def parseWifiLLCSVFile(self, s):
+        "read WifiLocationLogger CSV file (version 1) and add contents to database"
 
-        # assume that uploaded files are in CSV format
-        # TODO: detect file type
-
-        import csv
-        import StringIO
-        reader = csv.reader(StringIO.StringIO(s))
-
-        t = db.transaction()
+        transaction = db.transaction()
 
         # data of "current" scan (used for cumulating multiple hotspots at same location into single scan entry):
         currentScan = {
@@ -145,6 +142,7 @@ class Upload:
                 db.insert("hotspots", scanid=scanId, ssid=h[0], bssid=h[1], channel=h[2], level=h[3])
 
         fileId = None
+        reader = csv.reader(StringIO.StringIO(s))
         for row in reader:
             #print row
             if len(row) != 16 or row[1] != "1":
@@ -155,7 +153,6 @@ class Upload:
 
             if not(fileId):
                 fileId = db.insert("files", sessionid=sessionId, upload_date=datetime.datetime.now(), format=FILE_FORMAT_WIFI_LL_CSV, formatversion=int(formatVersion), device=deviceModel)
-                print "fileId: %s" % fileId
 
             dotPos = timestamp.rindex(".")
             timestampDt = datetime.datetime.strptime(timestamp[:dotPos], "%Y-%m-%d %H:%M:%S")
@@ -183,8 +180,8 @@ class Upload:
         if currentScan["ts"] is not None:
             addScan(fileId, currentScan, currentHotspots)
 
-        t.commit()
+        transaction.commit()
+
 
 if __name__ == "__main__":
     app.run()
-
