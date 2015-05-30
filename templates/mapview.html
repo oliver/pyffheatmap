@@ -122,7 +122,7 @@ function reloadData(e) {
     var zoom = getCookieDefault("zoom", 17);
 
     map = L.map('map').setView([lat, lon], zoom);
-    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 18}).addTo(map);
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 19}).addTo(map);
 
     markerLayer = new L.LayerGroup();
     if (getCookieDefault("layer_markers", "true") == "true")
