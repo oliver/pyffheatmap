@@ -18,7 +18,7 @@ import web
 FILE_FORMAT_WIFI_LL_CSV = 1
 
 
-db = web.database(dbn="sqlite", db="test1.db")
+db = web.database(dbn="sqlite", db="scanresults.db")
 render = web.template.render("templates/")
 
 urls = (
