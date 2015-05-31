@@ -80,6 +80,8 @@ var heatmapCfg = {
 
 
 var map;
+var mapquestTileLayer;
+var osmTileLayer;
 var markerLayer;
 var features = null;
 var heatmapLayer;
@@ -124,18 +126,22 @@ function reloadData(e) {
     var lat = getCookieDefault("ff_lat", 51.55);
     var lon = getCookieDefault("ff_lon", 9.94);
     var zoom = getCookieDefault("ff_zoom", 17);
+    var maptype = getCookieDefault("ff_maptype", "mapquest");
 
     map = L.map('map').setView([lat, lon], zoom);
 
-    var mapquestTileLayer = L.tileLayer('http://otile3.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png', {
+    mapquestTileLayer = L.tileLayer('http://otile3.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: 'Map data Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png">, Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         });
-    map.addLayer(mapquestTileLayer);
-    var osmTileLayer = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+    osmTileLayer = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         });
+    if (maptype == "mapnik")
+        map.addLayer(osmTileLayer);
+    else
+        map.addLayer(mapquestTileLayer);
 
     markerLayer = new L.LayerGroup();
     if (getCookieDefault("ff_layer_markers", "true") == "true")
@@ -165,6 +171,7 @@ function reloadData(e) {
     setCookie("ff_lon", center.lng);
     setCookie("ff_zoom", map.getZoom());
 
+    setCookie("ff_maptype", map.hasLayer(osmTileLayer) ? "mapnik" : "mapquest");
     setCookie("ff_layer_markers", map.hasLayer(markerLayer) ? "true" : "false");
     setCookie("ff_layer_heatmap", map.hasLayer(heatmapLayer) ? "true" : "false");
 });
