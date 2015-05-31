@@ -3,9 +3,9 @@
 -- create necessary tables in sqlite DB
 --
 
-drop table files;
-drop table scans;
-drop table hotspots;
+drop table if exists files;
+drop table if exists scans;
+drop table if exists hotspots;
 
 -- rename "files" to "sessions"? or "uploads"?
 create table files (
