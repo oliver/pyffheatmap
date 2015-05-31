@@ -89,7 +89,7 @@ function reloadData(e) {
         {
             if (features != null)
             {
-                map.removeLayer(features);
+                markerLayer.removeLayer(features);
             }
 
             features = new L.geoJson(response, {
@@ -97,7 +97,7 @@ function reloadData(e) {
                     return new L.Marker(latlng, {title: "(quality: " + feature.properties.quality + ") " + feature.properties.text});
                 }
             });
-            features.addTo(markerLayer);
+            markerLayer.addLayer(features);
 
             // set heatmap data
             var heatData = {
