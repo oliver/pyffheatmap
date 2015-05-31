@@ -126,7 +126,16 @@ function reloadData(e) {
     var zoom = getCookieDefault("ff_zoom", 17);
 
     map = L.map('map').setView([lat, lon], zoom);
-    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {maxZoom: 19}).addTo(map);
+
+    var mapquestTileLayer = L.tileLayer('http://otile3.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: 'Map data Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png">, Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        });
+    map.addLayer(mapquestTileLayer);
+    var osmTileLayer = L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        });
 
     markerLayer = new L.LayerGroup();
     if (getCookieDefault("ff_layer_markers", "true") == "true")
@@ -136,11 +145,15 @@ function reloadData(e) {
     if (getCookieDefault("ff_layer_heatmap", "true") == "true")
         map.addLayer(heatmapLayer);
 
+    var baseLayers = {
+        "MapQuest": mapquestTileLayer,
+        "OSM Mapnik": osmTileLayer,
+    };
     var overlays = {
         "Markers": markerLayer,
         "Heatmap": heatmapLayer,
     };
-    L.control.layers({}, overlays).addTo(map);
+    L.control.layers(baseLayers, overlays).addTo(map);
 
     reloadData();
     map.on('moveend', reloadData);
