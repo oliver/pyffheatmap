@@ -6,9 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
 <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+<link rel="stylesheet" href="http://sintef-9012.github.io/PruneCluster/dist/LeafletStyleSheet.css" />
 
 <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
 <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+<script src="http://sintef-9012.github.io/PruneCluster/dist/PruneCluster.min.js"></script>
 <script src="http://github.com/pa7/heatmap.js/raw/v2.0/build/heatmap.min.js"></script>
 <script src="http://raw.githubusercontent.com/pa7/heatmap.js/develop/plugins/leaflet-heatmap.js"></script>
 
@@ -84,6 +86,7 @@ var mapquestTileLayer;
 var osmTileLayer;
 var markerLayerGroup;
 var markerList = null;
+var pruneCluster;
 var heatmapLayer;
 
 function reloadData(e) {
@@ -100,6 +103,8 @@ function reloadData(e) {
             markerList = new L.FeatureGroup();
             markerLayerGroup.addLayer(markerList);
 
+            pruneCluster.RemoveMarkers();
+
             var heatData = {
                 min: 0,
                 max: 40,
@@ -113,7 +118,12 @@ function reloadData(e) {
 
                 var newMarker = new L.Marker([point.lat, point.lon], {title: "(quality: " + point.quality + ") " + point.text});
                 newMarker.addTo(markerList);
+
+                var pruneMarker = new PruneCluster.Marker(point.lat, point.lon);
+                pruneMarker.data.popup = "(quality: " + point.quality + ") " + point.text;
+                pruneCluster.RegisterMarker(pruneMarker);
             }
+            pruneCluster.ProcessView();
             heatmapLayer.setData(heatData);
         }
     });
@@ -141,8 +151,12 @@ function reloadData(e) {
         map.addLayer(mapquestTileLayer);
 
     markerLayerGroup = new L.LayerGroup();
-    if (getCookieDefault("ff_layer_markers", "true") == "true")
+    if (getCookieDefault("ff_layer_markers", "false") == "true")
         map.addLayer(markerLayerGroup);
+
+    pruneCluster = new PruneClusterForLeaflet();
+    if (getCookieDefault("ff_layer_cluster", "true") == "true")
+        map.addLayer(pruneCluster);
 
     heatmapLayer = new HeatmapOverlay(heatmapCfg);
     if (getCookieDefault("ff_layer_heatmap", "true") == "true")
@@ -153,8 +167,9 @@ function reloadData(e) {
         "OSM Mapnik": osmTileLayer,
     };
     var overlays = {
-        "Markers": markerLayerGroup,
         "Heatmap": heatmapLayer,
+        "Cluster Markers": pruneCluster,
+        "All Markers": markerLayerGroup,
     };
     L.control.layers(baseLayers, overlays).addTo(map);
 
@@ -171,6 +186,7 @@ function reloadData(e) {
     setCookie("ff_maptype", map.hasLayer(osmTileLayer) ? "mapnik" : "mapquest");
     setCookie("ff_layer_markers", map.hasLayer(markerLayerGroup) ? "true" : "false");
     setCookie("ff_layer_heatmap", map.hasLayer(heatmapLayer) ? "true" : "false");
+    setCookie("ff_layer_cluster", map.hasLayer(pruneCluster) ? "true" : "false");
 });
 
 </script>
