@@ -46,12 +46,7 @@ class MapData:
         scans = db.query("select * from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north",
             vars={"west": float(west), "east": float(east), "north": float(north), "south": float(south)})
 
-        geojson = {
-            "type": "FeatureCollection",
-            "features": []
-        }
-
-        numRows = 0
+        jsonData = []
         for row in scans:
             hotspots = db.query("select * from hotspots where scanid = $scanid",
                 vars={"scanid": row["id"]})
@@ -66,24 +61,17 @@ class MapData:
                 desc = "(no hotspots)"
                 continue
 
-            feat = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [ row["lon"], row["lat"] ]
-                },
-                "properties": {
-                    "quality": maxLevel+100,
-                    "text": desc,
-                }
+            point = {
+                "lat": row["lat"],
+                "lon": row["lon"],
+                "quality": maxLevel+100,
+                "text": desc,
             }
-            geojson["features"].append(feat)
-            numRows+=1
-
-        print "numRows: %d" % numRows
+            jsonData.append(point)
+        print "num points: %d" % len(jsonData)
 
         web.header("Content-Type", "application/json")
-        return json.dumps( geojson )
+        return json.dumps(jsonData)
 
 
 class Upload:

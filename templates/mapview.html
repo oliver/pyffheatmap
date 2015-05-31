@@ -82,8 +82,8 @@ var heatmapCfg = {
 var map;
 var mapquestTileLayer;
 var osmTileLayer;
-var markerLayer;
-var features = null;
+var markerLayerGroup;
+var markerList = null;
 var heatmapLayer;
 
 function reloadData(e) {
@@ -93,29 +93,26 @@ function reloadData(e) {
         url: "/mapdata/"+bounds.getWest()+"/"+bounds.getEast()+"/"+bounds.getNorth()+"/"+bounds.getSouth(),
         success: function(response)
         {
-            if (features != null)
+            if (markerList != null)
             {
-                markerLayer.removeLayer(features);
+                markerLayerGroup.removeLayer(markerList);
             }
+            markerList = new L.FeatureGroup();
+            markerLayerGroup.addLayer(markerList);
 
-            features = new L.geoJson(response, {
-                pointToLayer: function (feature, latlng) {
-                    return new L.Marker(latlng, {title: "(quality: " + feature.properties.quality + ") " + feature.properties.text});
-                }
-            });
-            markerLayer.addLayer(features);
-
-            // set heatmap data
             var heatData = {
                 min: 0,
                 max: 40,
                 data: [],
             };
-            for (var i in response.features)
+            for (var i in response)
             {
-                var feature = response.features[i];
-                var newPoint = {lat: feature.geometry.coordinates[1], lng: feature.geometry.coordinates[0], value: feature.properties.quality}
-                heatData.data.push(newPoint);
+                var point = response[i];
+                var newHeatPoint = {lat: point.lat, lng: point.lon, value: point.quality};
+                heatData.data.push(newHeatPoint);
+
+                var newMarker = new L.Marker([point.lat, point.lon], {title: "(quality: " + point.quality + ") " + point.text});
+                newMarker.addTo(markerList);
             }
             heatmapLayer.setData(heatData);
         }
@@ -143,9 +140,9 @@ function reloadData(e) {
     else
         map.addLayer(mapquestTileLayer);
 
-    markerLayer = new L.LayerGroup();
+    markerLayerGroup = new L.LayerGroup();
     if (getCookieDefault("ff_layer_markers", "true") == "true")
-        map.addLayer(markerLayer);
+        map.addLayer(markerLayerGroup);
 
     heatmapLayer = new HeatmapOverlay(heatmapCfg);
     if (getCookieDefault("ff_layer_heatmap", "true") == "true")
@@ -156,7 +153,7 @@ function reloadData(e) {
         "OSM Mapnik": osmTileLayer,
     };
     var overlays = {
-        "Markers": markerLayer,
+        "Markers": markerLayerGroup,
         "Heatmap": heatmapLayer,
     };
     L.control.layers(baseLayers, overlays).addTo(map);
@@ -172,7 +169,7 @@ function reloadData(e) {
     setCookie("ff_zoom", map.getZoom());
 
     setCookie("ff_maptype", map.hasLayer(osmTileLayer) ? "mapnik" : "mapquest");
-    setCookie("ff_layer_markers", map.hasLayer(markerLayer) ? "true" : "false");
+    setCookie("ff_layer_markers", map.hasLayer(markerLayerGroup) ? "true" : "false");
     setCookie("ff_layer_heatmap", map.hasLayer(heatmapLayer) ? "true" : "false");
 });
 
