@@ -52,14 +52,14 @@ class MapData:
                 vars={"scanid": row["id"]})
 
             hotspots = list(hotspots)
-            maxLevel = max( [-1000] + [ h["level"] for h in hotspots] )
-
-            ssids = [ h["ssid"] for h in hotspots ]
-            if ssids:
-                desc = ("%d: " % len(ssids)) + (", ".join(ssids))
-            else:
-                desc = "(no hotspots)"
+            if not(hotspots):
                 continue
+
+            maxLevel = max([ h["level"] for h in hotspots] )
+
+            ssids = set([ h["ssid"] for h in hotspots ])
+            bssids = [ h["bssid"] for h in hotspots ]
+            desc = "%s: %s" % (", ".join(ssids), ", ".join(bssids))
 
             point = {
                 "lat": row["lat"],
