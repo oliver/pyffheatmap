@@ -43,21 +43,13 @@ class Map:
 class MapData:
     def GET(self, west, east, north, south):
 
-        scans = db.query("select *, (select count(*) from hotspots where scans.id = hotspots.scanid) as hscount from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north and hscount > 0",
+        scans = db.query("select *, (select count(*) from hotspots where scans.id = hotspots.scanid) as hscount, (select max(level) from hotspots where scans.id = hotspots.scanid) as maxlevel, (select group_concat(distinct ssid) from hotspots where scans.id = hotspots.scanid) as ssidnames, (select group_concat(bssid, ', ') from hotspots where scans.id = hotspots.scanid) as bssidnames from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north and hscount > 0",
             vars={"west": float(west), "east": float(east), "north": float(north), "south": float(south)})
 
         jsonData = []
         for row in scans:
-            hotspots = db.query("select * from hotspots where scanid = $scanid",
-                vars={"scanid": row["id"]})
-
-            hotspots = list(hotspots)
-
-            maxLevel = max([ h["level"] for h in hotspots] )
-
-            ssids = set([ h["ssid"] for h in hotspots ])
-            bssids = [ h["bssid"] for h in hotspots ]
-            desc = "%s: %s" % (", ".join(ssids), ", ".join(bssids))
+            maxLevel = row["maxlevel"]
+            desc = "%s: %s" % (row["ssidnames"], row["bssidnames"])
 
             point = {
                 "lat": row["lat"],
