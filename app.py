@@ -43,7 +43,7 @@ class Map:
 class MapData:
     def GET(self, west, east, north, south):
 
-        scans = db.query("select * from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north",
+        scans = db.query("select *, (select count(*) from hotspots where scans.id = hotspots.scanid) as hscount from scans where scans.lon >= $west and scans.lon <= $east and scans.lat >= $south and scans.lat <= $north and hscount > 0",
             vars={"west": float(west), "east": float(east), "north": float(north), "south": float(south)})
 
         jsonData = []
@@ -52,8 +52,6 @@ class MapData:
                 vars={"scanid": row["id"]})
 
             hotspots = list(hotspots)
-            if not(hotspots):
-                continue
 
             maxLevel = max([ h["level"] for h in hotspots] )
 
