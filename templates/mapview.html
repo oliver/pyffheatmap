@@ -210,7 +210,7 @@ function reloadData(e) {
         "Cluster Markers": pruneCluster,
         "All Markers": markerLayerGroup,
     };
-    L.control.layers(baseLayers, overlays).addTo(map);
+    L.control.layers(baseLayers, overlays, {collapsed: false}).addTo(map);
     map.on("overlayadd", function(e) {
         reloadData();
     });
