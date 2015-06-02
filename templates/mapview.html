@@ -123,8 +123,10 @@ function reloadData(e) {
             }
             markerList = new L.FeatureGroup();
             markerLayerGroup.addLayer(markerList);
+            var simpleMarkersVisible = map.hasLayer(markerLayerGroup);
 
             pruneCluster.RemoveMarkers();
+            var pruneClusterVisible = map.hasLayer(pruneCluster);
 
             var heatData = {
                 min: 0,
@@ -137,17 +139,25 @@ function reloadData(e) {
                 var newHeatPoint = {lat: point.lat, lng: point.lon, value: point.quality};
                 heatData.data.push(newHeatPoint);
 
-                var newMarker = new L.Marker([point.lat, point.lon], {title: "(quality: " + point.quality + ") " + point.text});
-                newMarker.addTo(markerList);
+                if (simpleMarkersVisible)
+                {
+                    var newMarker = new L.Marker([point.lat, point.lon], {title: "(quality: " + point.quality + ") " + point.text});
+                    newMarker.addTo(markerList);
+                }
 
-                var pruneMarker = new PruneCluster.Marker(point.lat, point.lon);
-                pruneMarker.data.popup = "(quality: " + point.quality + ") " + point.text;
-                pruneCluster.RegisterMarker(pruneMarker);
+                if (pruneClusterVisible)
+                {
+                    var pruneMarker = new PruneCluster.Marker(point.lat, point.lon);
+                    pruneMarker.data.popup = "(quality: " + point.quality + ") " + point.text;
+                    pruneCluster.RegisterMarker(pruneMarker);
+                }
             }
-            pruneCluster.ProcessView();
+            if (pruneClusterVisible)
+                pruneCluster.ProcessView();
             if (map.hasLayer(heatmapLayer))
                 heatmapLayer.setData(heatData);
-            hexLayer.data(heatData.data);
+            if (map.hasLayer(hexLayer))
+                hexLayer.data(heatData.data);
         }
     });
 }
