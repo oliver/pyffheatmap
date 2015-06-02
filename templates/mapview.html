@@ -13,6 +13,9 @@
 <script src="http://sintef-9012.github.io/PruneCluster/dist/PruneCluster.min.js"></script>
 <script src="http://github.com/pa7/heatmap.js/raw/v2.0/build/heatmap.min.js"></script>
 <script src="http://raw.githubusercontent.com/pa7/heatmap.js/develop/plugins/leaflet-heatmap.js"></script>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="https://raw.githubusercontent.com/d3/d3-plugins/master/hexbin/hexbin.js"></script>
+<script src="https://raw.githubusercontent.com/Asymmetrik/leaflet-d3/master/dist/leaflet-d3.min.js"></script>
 
 <style type="text/css">
 body {
@@ -22,6 +25,11 @@ body {
 html, body, #map {
     height: 100%;
     width: 100%;
+}
+
+.hexbin-hexagon {
+    stroke: #000;
+    stroke-width: 1px;
 }
 </style>
 </head>
@@ -79,7 +87,19 @@ var heatmapCfg = {
   valueField: 'value'
 };
 
-
+var hexlayerOptions = {
+    radius : 20,                            // Size of the hexagons/bins
+    opacity: 0.5,                           // Opacity of the hexagonal layer
+    duration: 200,                          // millisecond duration of d3 transitions
+    lng: function(p){ return p.lng; },      // longitude accessor
+    lat: function(p){ return p.lat; },      // latitude accessor
+    value: function(binValues){             // value accessor (returns max. signal quality for each bin)
+        var values = binValues.map(function(obj) { return obj.o.value; });
+        return Math.max.apply(Math, values);
+    },
+    valueFloor: 0,
+    valueCeil: undefined, // use max. value of displayed data
+};
 
 var map;
 var mapquestTileLayer;
@@ -88,6 +108,7 @@ var markerLayerGroup;
 var markerList = null;
 var pruneCluster;
 var heatmapLayer;
+var hexLayer;
 
 function reloadData(e) {
     bounds = map.getBounds();
@@ -125,6 +146,7 @@ function reloadData(e) {
             }
             pruneCluster.ProcessView();
             heatmapLayer.setData(heatData);
+            hexLayer.data(heatData.data);
         }
     });
 }
@@ -162,12 +184,18 @@ function reloadData(e) {
     if (getCookieDefault("ff_layer_heatmap", "true") == "true")
         map.addLayer(heatmapLayer);
 
+    hexLayer = L.hexbinLayer(hexlayerOptions);
+    hexLayer.colorScale().range(["white", "blue"]);
+    if (getCookieDefault("ff_layer_hexbins", "true") == "true")
+        map.addLayer(hexLayer);
+
     var baseLayers = {
         "MapQuest": mapquestTileLayer,
         "OSM Mapnik": osmTileLayer,
     };
     var overlays = {
         "Heatmap": heatmapLayer,
+        "Hexbins": hexLayer,
         "Cluster Markers": pruneCluster,
         "All Markers": markerLayerGroup,
     };
@@ -186,6 +214,7 @@ function reloadData(e) {
     setCookie("ff_maptype", map.hasLayer(osmTileLayer) ? "mapnik" : "mapquest");
     setCookie("ff_layer_markers", map.hasLayer(markerLayerGroup) ? "true" : "false");
     setCookie("ff_layer_heatmap", map.hasLayer(heatmapLayer) ? "true" : "false");
+    setCookie("ff_layer_hexbins", map.hasLayer(hexLayer) ? "true" : "false");
     setCookie("ff_layer_cluster", map.hasLayer(pruneCluster) ? "true" : "false");
 });
 
