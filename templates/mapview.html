@@ -204,6 +204,10 @@ function reloadData(e) {
     map.on("overlayadd", function(e) {
         reloadData();
     });
+    map.on("overlayremove", function(e) {
+        if (e.layer == hexLayer)
+            hexLayer.data([]);
+    });
 
     reloadData();
     map.on('moveend', reloadData);
