@@ -145,7 +145,8 @@ function reloadData(e) {
                 pruneCluster.RegisterMarker(pruneMarker);
             }
             pruneCluster.ProcessView();
-            heatmapLayer.setData(heatData);
+            if (map.hasLayer(heatmapLayer))
+                heatmapLayer.setData(heatData);
             hexLayer.data(heatData.data);
         }
     });
@@ -200,6 +201,9 @@ function reloadData(e) {
         "All Markers": markerLayerGroup,
     };
     L.control.layers(baseLayers, overlays).addTo(map);
+    map.on("overlayadd", function(e) {
+        reloadData();
+    });
 
     reloadData();
     map.on('moveend', reloadData);
