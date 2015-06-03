@@ -5,10 +5,13 @@
 #
 
 
+import os
+import time
 import datetime
 import StringIO
 import json
 import csv
+import tempfile
 import web
 
 #web.config.debug = False
@@ -83,9 +86,11 @@ class Upload:
             message = "ignoring empty file."
         else:
             # save raw file contents for debugging:
-            fd = open("/tmp/uploaded.bin", "wb")
-            fd.write(contents)
-            fd.close()
+            (tempFd, tempPath) = tempfile.mkstemp(prefix="uploaded-%s-" % time.strftime("%Y%m%d-%H%M%S"), suffix=".bin", dir="/tmp/")
+            print "writing uploaded data (%d bytes) to %s" % (len(contents), tempPath)
+            fp = os.fdopen(tempFd, "wb")
+            fp.write(contents)
+            fp.close()
 
             try:
                 # assume that uploaded files are in CSV format
