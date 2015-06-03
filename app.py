@@ -85,6 +85,8 @@ class Upload:
 
         if not(contents):
             message = "ignoring empty file."
+        elif len(contents) > 30*1024*1024:
+            message = "ignoring too large file (%d bytes)" % len(contents)
         else:
             # save raw file contents for debugging:
             (tempFd, tempPath) = tempfile.mkstemp(prefix="uploaded-%s-" % time.strftime("%Y%m%d-%H%M%S"), suffix=".bin", dir="/tmp/")
