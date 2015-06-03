@@ -20,6 +20,5 @@ For debugging, uploaded data is also stored in `/tmp/uploaded.bin` so that you c
 ## Open Points ##
 
 * the current heat map is basically wrong. It incorrectly takes the number of measurements into account, which means that you will see a huge red blob in places where you made many measurements. Instead, it should actually only take the reception level into account.
-* the CSV file is only superficially checked for correctness. It is probably quite easy to break (or break *into*) the web application by uploading a crafted file. So don't allow access to untrusted users.
 
 The whole project is an experimental prototype, to allow development of suitable visualizations of wifi reception for Freifunk projects, and to act as server for new wifi reception measurement tools. You are encouraged to add new map features or to add support for new upload formats!
