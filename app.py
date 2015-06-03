@@ -12,6 +12,7 @@ import StringIO
 import json
 import csv
 import tempfile
+import re
 import web
 
 #web.config.debug = False
@@ -95,11 +96,13 @@ class Upload:
             try:
                 # assume that uploaded files are in CSV format
                 # TODO: detect file type
-                self.parseWifiLLCSVFile(contents)
+                (numLines, numBadLines) = self.parseWifiLLCSVFile(contents)
             except Exception, e:
                 message = "error handling uploaded file (%s)" % e
             else:
-                message = "file was uploaded (%d bytes)!" % len(contents)
+                message = "file was uploaded (%d bytes); %d lines" % (len(contents), numLines)
+                if numBadLines > 0:
+                    message += "; %d lines were discarded due to errors" % numBadLines
 
         #raise web.seeother("/finished")
         return render.upload(message)
@@ -125,27 +128,33 @@ class Upload:
                 db.insert("hotspots", scanid=scanId, ssid=h[0], bssid=h[1], channel=h[2], level=h[3])
 
         fileId = None
+        numLines = 0
+        numBadLines = 0
         reader = csv.reader(StringIO.StringIO(s))
         for row in reader:
+            numLines+=1
             #print row
             if len(row) != 16 or row[1] != "1":
                 print "invalid data in line %d (num columns: %d; format version: '%s')" % (reader.line_num, len(row), row[1])
+                numBadLines+=1
                 continue
 
-            (timestamp, formatVersion, deviceModel, sessionId, lat, lon, alt, accuracy, speed, specialCode, timeSinceLastLocUpdate, ssid, bssid, signalLevel, channel, filterRE) = row
+            try:
+                (timestampDt, formatVersion, deviceModel, sessionId, lat, lon, alt, accuracy, speed, specialCode, timeSinceLastLocUpdate, ssid, bssid, signalLevel, channel, filterRE) = self.parseRowData(row)
+            except Exception, e:
+                print "invalid data in line %d (%s)" % (reader.line_num, e)
+                numBadLines+=1
+                continue
 
             if not(fileId):
                 fileId = db.insert("files", sessionid=sessionId, upload_date=datetime.datetime.now(), format=FILE_FORMAT_WIFI_LL_CSV, formatversion=int(formatVersion), device=deviceModel)
 
-            dotPos = timestamp.rindex(".")
-            timestampDt = datetime.datetime.strptime(timestamp[:dotPos], "%Y-%m-%d %H:%M:%S")
-
             newScan = {
                 "ts": timestampDt,
-                "lat": float(lat),
-                "lon": float(lon),
-                "alt": float(alt),
-                "accuracy": float(accuracy),
+                "lat": lat,
+                "lon": lon,
+                "alt": alt,
+                "accuracy": accuracy,
             }
 
             if newScan != currentScan:
@@ -156,8 +165,8 @@ class Upload:
                 currentScan = newScan
                 currentHotspots = []
 
-            if int(specialCode) == 0 and ssid.find("freifunk") != -1: # row actually contains a hotspot, and it's a FF node
-                currentHotspots.append( (ssid.decode("utf-8", "replace"), bssid, int(channel), int(signalLevel)) )
+            if specialCode == 0 and ssid.find("freifunk") != -1: # row actually contains a hotspot, and it's a FF node
+                currentHotspots.append( (ssid, bssid, channel, signalLevel) )
 
         # save last scan entry
         if currentScan["ts"] is not None:
@@ -165,6 +174,50 @@ class Upload:
 
         transaction.commit()
 
+        return (numLines, numBadLines)
+
+    def parseRowData (self, row):
+        (timestamp, formatVersion, deviceModel, sessionId, lat, lon, alt, accuracy, speed, specialCode, timeSinceLastLocUpdate, ssid, bssid, signalLevel, channel, filterRE) = row
+
+        dotPos = timestamp.rindex(".")
+        timestampDt = datetime.datetime.strptime(timestamp[:dotPos], "%Y-%m-%d %H:%M:%S")
+
+        if formatVersion != "1": raise Exception("bad formatVersion")
+        formatVersion = int(formatVersion)
+
+        deviceModel = deviceModel[:50].decode("utf-8", "replace")
+
+        sessionId = sessionId[:50].decode("utf-8", "replace")
+
+        lat = float(lat)
+        lon = float(lon)
+        alt = float(alt)
+        accuracy = float(accuracy)
+        speed = float(speed)
+
+        if specialCode != "0" and specialCode != "1": raise Exception("bad specialCode")
+        specialCode = int(specialCode)
+
+        timeSinceLastLocUpdate = int(timeSinceLastLocUpdate)
+
+        if specialCode == 1: # no AP found; following values should be empty anyway:
+            ssid = ""
+            bssid = ""
+            signalLevel = 0
+            channel = 0
+        else:
+            ssid = ssid[:50].decode("utf-8", "replace")
+
+            bssid = bssid[:17]
+            if not(re.match(r"^[0-9a-fA-F:]*$", bssid)): raise Exception("bad bssid '%s'" % bssid)
+
+            signalLevel = int(signalLevel)
+
+            channel = int(channel)
+
+        filterRE = filterRE[:50].decode("utf-8", "replace")
+
+        return (timestampDt, formatVersion, deviceModel, sessionId, lat, lon, alt, accuracy, speed, specialCode, timeSinceLastLocUpdate, ssid, bssid, signalLevel, channel, filterRE)
 
 if __name__ == "__main__":
     app.run()
