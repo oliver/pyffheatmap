@@ -22,3 +22,15 @@ For debugging, uploaded data is also stored in `/tmp/uploaded.bin` so that you c
 * the current heat map is basically wrong. It incorrectly takes the number of measurements into account, which means that you will see a huge red blob in places where you made many measurements. Instead, it should actually only take the reception level into account.
 
 The whole project is an experimental prototype, to allow development of suitable visualizations of wifi reception for Freifunk projects, and to act as server for new wifi reception measurement tools. You are encouraged to add new map features or to add support for new upload formats!
+
+## Third-Party Components ##
+This application builds upon several existing components.
+For the following components the (minified) source code is being delivered together with this project (in the `/static` subdirectory):
+
+* [jQuery](http://jquery.org): MIT license
+* [Leaflet](http://leafletjs.com): BSD license
+* [PruneCluster](http://github.com/SINTEF-9012/PruneCluster): MIT license
+* [Heatmap.js and Leaflet-Heatmap](http://patrick-wied.at/static/heatmapjs): MIT license
+* [D3.js](http://d3js.org): BSD license
+* [D3-hexbin](http://github.com/d3/d3-plugins/tree/master/hexbin): BSD license
+* [Leaflet-D3](http://github.com/Asymmetrik/leaflet-d3): MIT license
